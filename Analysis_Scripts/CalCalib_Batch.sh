@@ -33,17 +33,18 @@ if [[ $OPT == "HMS" ]]; then
     elif [[ $OPT == "SHMS" ]]; then
     spec="shms"
 fi
-if [[ ${USER} = "cdaq" ]]; then
-    echo "Warning, running as cdaq."
-    echo "Please be sure you want to do this."
-    echo "Comment this section out and run again if you're sure."
-    exit 2
-fi        
+#if [[ ${USER} = "cdaq" ]]; then
+#    echo "Warning, running as cdaq."
+#    echo "Please be sure you want to do this."
+#    echo "Comment this section out and run again if you're sure."
+#    exit 2
+#fi        
 # Set path depending upon hostname. Change or add more as needed  
 if [[ "${HOSTNAME}" = *"farm"* ]]; then  
+    #REPLAYPATH="/group/c-pionlt/online_analysis/hallc_replay_lt"
     REPLAYPATH="/group/c-pionlt/USERS/${USER}/hallc_replay_lt"
     if [[ "${HOSTNAME}" != *"ifarm"* ]]; then
-	source /site/12gev_phys/softenv.sh 2.3
+	#source /site/12gev_phys/softenv.sh 2.4 // CUE broken, should no longer use
 	source /apps/root/6.18.04/setroot_CUE.bash
     fi
     cd "/group/c-pionlt/hcana/"
@@ -52,14 +53,14 @@ if [[ "${HOSTNAME}" = *"farm"* ]]; then
     source "$REPLAYPATH/setup.sh"
 elif [[ "${HOSTNAME}" = *"qcd"* ]]; then
     REPLAYPATH="/group/c-pionlt/USERS/${USER}/hallc_replay_lt"
-    source /site/12gev_phys/softenv.sh 2.3
+    #source /site/12gev_phys/softenv.sh 2.4 // CUE broken, should no longer use
     source /apps/root/6.18.04/setroot_CUE.bash
     cd "/group/c-pionlt/hcana/"
     source "/group/c-pionlt/hcana/setup.sh" 
     cd "$REPLAYPATH"
     source "$REPLAYPATH/setup.sh" 
 elif [[ "${HOSTNAME}" = *"cdaq"* ]]; then
-    REPLAYPATH="/home/cdaq/hallc-online/hallc_replay_lt"
+    REPLAYPATH="/home/cdaq/pionLT-2021/hallc_replay_lt"
 elif [[ "${HOSTNAME}" = *"phys.uregina.ca"* ]]; then
     REPLAYPATH="/home/${USER}/work/JLab/hallc_replay_lt"
 fi
@@ -81,10 +82,10 @@ fi
 ### Note, this is a stop gap, the calibration script should really just look for a sym link in the base directory itself
 ### Check the sym link you'll need exists, if it doesn't, make it!
 if [ ! -L "$REPLAYPATH/CALIBRATION/hms_cal_calib/ROOTfiles" ]; then
-    ln -s "/volatile/hallc/c-pionlt/${USER}/ROOTfiles" "$REPLAYPATH/CALIBRATION/hms_cal_calib/ROOTfiles"
+    ln -s "/volatile/hallc/c-pionlt/online_analysis/ROOTfiles" "$REPLAYPATH/CALIBRATION/hms_cal_calib/ROOTfiles"
 fi
 if [ ! -L "$REPLAYPATH/CALIBRATION/shms_cal_calib/ROOTfiles" ]; then
-    ln -s "/volatile/hallc/c-pionlt/${USER}/ROOTfiles" "$REPLAYPATH/CALIBRATION/shms_cal_calib/ROOTfiles"
+    ln -s "/volatile/hallc/c-pionlt/online_analysis/ROOTfiles" "$REPLAYPATH/CALIBRATION/shms_cal_calib/ROOTfiles"
 fi
 
 ### Run the first replay script, then, run the calibration macro

@@ -1,10 +1,10 @@
-#! /bin/bash                                                                                                                                                                               
+#! /bin/bash                                                   
 
 ### Stephen Kay, University of Regina
 ### 03/03/21
 ### stephen.kay@uregina.ca
-### A batch submission script based on an earlier version by Richard Trotta, Catholic University of America                       
-##### Modify required resources as needed!
+### A batch submission script based on an earlier version by Richard Trotta, Catholic University of America
+### Modify required resources as needed!
 
 echo "Running as ${USER}"
 RunList=$1
@@ -14,13 +14,10 @@ if [[ -z "$1" ]]; then
     exit 2
 fi
 
-##Output history file##
-historyfile=hist.$( date "+%Y-%m-%d_%H-%M-%S" ).log
-##Input run numbers##
+# 15/02/22 - SJDK - Added the swif2 workflow as a variable you can specify here
+Workflow="LTSep_${USER}" # Change this as desired
+# Input run numbers, this just points to a file which is a list of run numbers, one number per line
 inputFile="/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/InputRunLists/${RunList}"
-## Tape stub
-MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
-auger="augerID.tmp"
 
 while true; do
     read -p "Do you wish to begin a new batch submission? (Please answer yes or no) " yn
@@ -35,6 +32,11 @@ while true; do
                 echo ""
                 ##Run number#
                 runNum=$line
+		if [[ $runNum -ge 10000 ]]; then
+		    MSSstub='/mss/hallc/c-pionlt/raw/shms_all_%05d.dat'
+		elif [[ $runNum -lt 10000 ]]; then
+		    MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
+		fi
 		##Output batch job file##
 		batch="${USER}_${runNum}_FullReplay_Job.txt"
                 tape_file=`printf $MSSstub $runNum`
@@ -53,7 +55,7 @@ while true; do
                 echo "PROJECT: c-kaonlt" >> ${batch}
                 echo "TRACK: analysis" >> ${batch}
                 #echo "TRACK: debug" >> ${batch} ### Use for testing
-                echo "JOBNAME: KaonLT_${runNum}" >> ${batch}
+                echo "JOBNAME: PionLT_${runNum}" >> ${batch}
                 # Request disk space depending upon raw file size
                 echo "DISK_SPACE: "$(( $TapeFileSize * 2 ))" GB" >> ${batch}
 		if [[ $TapeFileSize -le 45 ]]; then
@@ -68,7 +70,7 @@ while true; do
 		echo "COMMAND:/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/Analysis_Scripts/FullReplay_Batch.sh ${runNum}" >> ${batch}
 		echo "MAIL: ${USER}@jlab.org" >> ${batch}
                 echo "Submitting batch"
-                eval "jsub ${batch} 2>/dev/null"
+                eval "swif2 add-jsub ${Workflow} -script ${batch} 2>/dev/null"
                 echo " "
 		sleep 2
 		rm ${batch}
@@ -83,6 +85,7 @@ while true; do
 		fi
 	    done < "$inputFile"
 	    )
+	    eval 'swif2 run ${Workflow}'
 	    break;;
         [Nn]* ) 
 	    exit;;

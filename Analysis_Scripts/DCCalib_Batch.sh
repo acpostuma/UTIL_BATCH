@@ -33,17 +33,18 @@ if [[ $OPT == "HMS" ]]; then
     spec="shms"
     specL="p"
 fi
-if [[ ${USER} = "cdaq" ]]; then
-    echo "Warning, running as cdaq."
-    echo "Please be sure you want to do this."
-    echo "Comment this section out and run again if you're sure."
-    exit 2
-fi        
+#if [[ ${USER} = "cdaq" ]]; then
+#    echo "Warning, running as cdaq."
+#    echo "Please be sure you want to do this."
+#    echo "Comment this section out and run again if you're sure."
+#    exit 2
+#fi        
 # Set path depending upon hostname. Change or add more as needed  
 if [[ "${HOSTNAME}" = *"farm"* ]]; then  
     REPLAYPATH="/group/c-pionlt/USERS/${USER}/hallc_replay_lt"
+    #REPLAYPATH="/group/c-pionlt/online_analysis/hallc_replay_lt"
     if [[ "${HOSTNAME}" != *"ifarm"* ]]; then
-	source /site/12gev_phys/softenv.sh 2.3
+	#source /site/12gev_phys/softenv.sh 2.4
 	source /apps/root/6.18.04/setroot_CUE.bash
     fi
     cd "/group/c-pionlt/hcana/"
@@ -52,14 +53,14 @@ if [[ "${HOSTNAME}" = *"farm"* ]]; then
     source "$REPLAYPATH/setup.sh"
 elif [[ "${HOSTNAME}" = *"qcd"* ]]; then
     REPLAYPATH="/group/c-pionlt/USERS/${USER}/hallc_replay_lt"
-    source /site/12gev_phys/softenv.sh 2.3
+    #source /site/12gev_phys/softenv.sh 2.4
     source /apps/root/6.18.04/setroot_CUE.bash
     cd "/group/c-pionlt/hcana/"
     source "/group/c-pionlt/hcana/setup.sh" 
     cd "$REPLAYPATH"
     source "$REPLAYPATH/setup.sh" 
 elif [[ "${HOSTNAME}" = *"cdaq"* ]]; then
-    REPLAYPATH="/home/cdaq/hallc-online/hallc_replay_lt"
+    REPLAYPATH="/home/cdaq/pionLT-2021/hallc_replay_lt"
 elif [[ "${HOSTNAME}" = *"phys.uregina.ca"* ]]; then
     REPLAYPATH="/home/${USER}/work/JLab/hallc_replay_lt"
 fi
@@ -84,8 +85,11 @@ fi
 
 ### Run the first replay script, then, run the calibration macro
 ### The first script uses a param file that uses "tzero per wire" set to 0 in the h/pdc cuts file
-eval "$REPLAYPATH/hcana -l -q \"SCRIPTS/COIN/CALIBRATION/"$OPT"DC_Calib_Coin_Pt1.C($RUNNUMBER,$MAXEVENTS)\""
 ROOTFILE="$REPLAYPATH/ROOTfiles/Calib/DC/"$OPT"_DC_Calib_Pt1_"$RUNNUMBER"_"$MAXEVENTS".root" 
+if [[ ! -f "${ROOTFILE}" ]]; then
+    eval "$REPLAYPATH/hcana -l -q \"SCRIPTS/COIN/CALIBRATION/"$OPT"DC_Calib_Coin_Pt1.C($RUNNUMBER,$MAXEVENTS)\""
+else echo "Pt1 Replay file already found at - ${ROOTFILE} - skipping Pt1 replay"
+fi
 cd "$REPLAYPATH/CALIBRATION/dc_calib/scripts"
 root -l -b -q "$REPLAYPATH/CALIBRATION/dc_calib/scripts/main_calib.C(\"$OPT\", \"$ROOTFILE\", $RUNNUMBER)"
 
@@ -160,12 +164,16 @@ sed -i 's|'"$BASE_PARAMFILE"'|'"DBASE/COIN/${OPT}_DCCalib/general_$RUNNUMBER.par
 
 # Depending upon spectrometer, switch out the relevant files in the param file
 if [[ $OPT == "HMS" ]]; then
-    sed -i "s/hdc_calib_.*/hdc_calib_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
-    sed -i "s/hdc_tzero_per_wire_.*/hdc_tzero_per_wire_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
+    sed -i "s/hdc_calib.*/CALIB\/hdc_calib_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
+    sed -i "s/hdc_tzero_per_wire.*/CALIB\/hdc_tzero_per_wire_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
 elif [[ $OPT == "SHMS" ]]; then
-    sed -i "s/pdc_calib_.*/pdc_calib_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
-    sed -i "s/pdc_tzero_per_wire_.*/pdc_tzero_per_wire_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
+    sed -i "s/pdc_calib.*/CALIB\/pdc_calib_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
+    sed -i "s/pdc_tzero_per_wire.*/CALIB\/pdc_tzero_per_wire_${RUNNUMBER}.param\"/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
 fi
+
+# This is a temporary (and crappy) solution, where we force the cuts.param file specified back to whatever it is in standard.database (hdc_cuts.param and pdc_cuts.param are sym links so this should be fine)
+sed -i "hdc_cuts.*/hdc_cuts.param/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"    
+sed -i "pdc_cuts.*/pdc_cuts.param/" "${REPLAYPATH}/DBASE/COIN/${OPT}_DCCalib/general_${RUNNUMBER}.param"
 
 ### Finally, replay again with our new parameter files
 cd $REPLAYPATH

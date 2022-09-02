@@ -18,14 +18,10 @@ fi
 ##Output history file##                                                                                            
 historyfile=hist.$( date "+%Y-%m-%d_%H-%M-%S" ).log
 
-##Output batch script##
-
-##Input run numbers##                                                                      
-##Point this to the location of your input run list                                           
+# 15/02/22 - SJDK - Added the swif2 workflow as a variable you can specify here
+Workflow="LTSep_${USER}" # Change this as desired
+# Input run numbers, this just points to a file which is a list of run numbers, one number per line
 inputFile="/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/InputRunLists/${RunList}"
-## Tape stub, you can point directly to a taped file and the farm job will do the jgetting for you, don't call it in your script!                                                      
-MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
-auger="augerID.tmp"
 
 while true; do
     read -p "Do you wish to begin a new batch submission? (Please answer yes or no) " yn
@@ -38,8 +34,13 @@ while true; do
                 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                 echo "Run number read from file: $line"
                 echo ""
-                ##Run number#                                                                                                                                                                                     
+                ##Run number#
                 runNum=$line
+		if [[ $runNum -ge 10000 ]]; then
+		    MSSstub='/mss/hallc/c-pionlt/raw/shms_all_%05d.dat'
+		elif [[ $runNum -lt 10000 ]]; then
+		    MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
+		fi
 		batch="${USER}_${runNum}_CTPeak_Job.txt"
                 tape_file=`printf $MSSstub $runNum`
 		# Print the size of the raw .dat file (converted to GB) to screen. sed command reads line 3 of the tape stub without the leading size=
@@ -74,7 +75,7 @@ while true; do
                 echo "COMMAND:/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/Analysis_Scripts/CTPeak_Analysis.sh ${runNum} ${MAXEVENTS}"  >> ${batch} ### Insert your script at end!
                 echo "MAIL: ${USER}@jlab.org" >> ${batch}
                 echo "Submitting batch"
-                eval "jsub ${batch} 2>/dev/null"
+                eval "swif2 add-jsub ${Workflow} -script ${batch} 2>/dev/null"
                 echo " "
 		sleep 2
 		rm ${batch}
@@ -89,6 +90,7 @@ while true; do
 		fi
 		done < "$inputFile"
 	     )
+	    eval 'swif2 run ${Workflow}'
 	    break;;
         [Nn]* ) 
 	        exit;;

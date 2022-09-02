@@ -1,9 +1,10 @@
-#! /bin/bash                                                                                                                                                                                                      
+#! /bin/bash
+                                                                                            
 ### Stephen Kay, University of Regina
 ### 03/03/21
 ### stephen.kay@uregina.ca
-### A batch submission script based on an earlier version by Richard Trotta, Catholic University of America                       
-##### Modify required resources as needed!                                                                                                                                   
+### A batch submission script based on an earlier version by Richard Trotta, Catholic University of America
+##### Modify required resources as needed!
 
 echo "Running as ${USER}"
 SPEC=$1
@@ -25,15 +26,10 @@ else
     MAXEVENTS=$3
 fi
 
-##Output history file##             
-historyfile=hist.$( date "+%Y-%m-%d_%H-%M-%S" ).log
-##Output batch script##
-batch="${USER}_Job.txt"
-##Input run numbers##
+# 15/02/22 - SJDK - Added the swif2 workflow as a variable you can specify here
+Workflow="LTSep_${USER}" # Change this as desired
+# Input run numbers, this just points to a file which is a list of run numbers, one number per line
 inputFile="/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/InputRunLists/${RunList}"
-## Tape stub  
-MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
-auger="augerID.tmp"
 
 while true; do
     read -p "Do you wish to begin a new batch submission? (Please answer yes or no) " yn
@@ -48,6 +44,13 @@ while true; do
                 echo ""
                 ##Run number#
                 runNum=$line
+		if [[ $runNum -ge 10000 ]]; then
+		    MSSstub='/mss/hallc/c-pionlt/raw/shms_all_%05d.dat'
+		elif [[ $runNum -lt 10000 ]]; then
+		    MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
+		fi
+		##Output batch job file##
+		batch="${USER}_${runNum}_${SPEC}_HodoCalib_Job.txt"
                 tape_file=`printf $MSSstub $runNum`
                 tmp=tmp
                 ##Finds number of lines of input file##
@@ -59,7 +62,7 @@ while true; do
                 echo "PROJECT: c-kaonlt" >> ${batch}
 		echo "TRACK: analysis" >> ${batch}
 		#echo "TRACK: debug" >> ${batch}
-                echo "JOBNAME: KaonLT_HodoCalib_${SPEC}_${runNum}" >> ${batch}
+                echo "JOBNAME: PionLT_HodoCalib_${SPEC}_${runNum}" >> ${batch}
 		echo "DISK_SPACE: 20 GB" >>${batch}
                 echo "MEMORY: 3000 MB" >> ${batch}
                 #echo "OS: centos7" >> ${batch}
@@ -68,7 +71,7 @@ while true; do
 		echo "COMMAND:/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/Analysis_Scripts/HodoCalib_Batch.sh ${runNum} ${SPEC} ${MAXEVENTS}" >> ${batch} 
                 echo "MAIL: ${USER}@jlab.org" >> ${batch}
                 echo "Submitting batch"
-                eval "jsub ${batch} 2>/dev/null"
+                eval "swif2 add-jsub ${Workflow} -script ${batch} 2>/dev/null"
                 echo " "
                 i=$(( $i + 1 ))
 		if [ $i == $numlines ]; then
@@ -81,6 +84,7 @@ while true; do
 		fi
 	    done < "$inputFile"
 	    )
+	    eval 'swif2 run ${Workflow}'
 	    break;;
         [Nn]* ) 
 	    exit;;

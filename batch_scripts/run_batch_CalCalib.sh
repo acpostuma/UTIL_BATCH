@@ -19,15 +19,11 @@ if [[ $3 -eq "" ]]; then
 else
     MAXEVENTS=$3
 fi
-##Output history file##                                                                                            
-historyfile=hist.$( date "+%Y-%m-%d_%H-%M-%S" ).log
-##Output batch script##                                           
-batch="${USER}_Job.txt"
+# 15/02/22 - SJDK - Added the swif2 workflow as a variable you can specify here
+Workflow="LTSep_${USER}" # Change this as desired
 ##Input run numbers##                                                                      
 inputFile="/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/InputRunLists/${RunList}"
-## Tape stub, you can point directly to a taped file and the farm job will do the jgetting for you, don't call it in your script!                   
-MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
-auger="augerID.tmp"
+
 while true; do
     read -p "Do you wish to begin a new batch submission? (Please answer yes or no) " yn
     case $yn in
@@ -41,6 +37,13 @@ while true; do
                 echo ""
                 ##Run number#                                                                           
                 runNum=$line
+		if [[ $runNum -ge 10000 ]]; then
+		    MSSstub='/mss/hallc/c-pionlt/raw/shms_all_%05d.dat'
+		elif [[ $runNum -lt 10000 ]]; then
+		    MSSstub='/mss/hallc/spring17/raw/coin_all_%05d.dat'
+		fi
+		##Output batch script##                                           
+		batch="${USER}_${runNum}_${SPEC}_CalCalib_Job.txt"
                 tape_file=`printf $MSSstub $runNum`
 		# Print the size of the raw .dat file (converted to GB) to screen. sed command reads line 3 of the tape stub without the leading size=
 	        TapeFileSize=$(($(sed -n '4 s/^[^=]*= *//p' < $tape_file)/1000000000))
@@ -58,7 +61,7 @@ while true; do
 		echo "PROJECT: c-kaonlt" >> ${batch} # Or whatever your project is!
 		echo "TRACK: analysis" >> ${batch} ## Use this track for production running
                 #echo "TRACK: debug" >> ${batch} ### Use this track for testing, higher priority
-                echo "JOBNAME: CalCalib${SPPEC}_${runNum}" >> ${batch} ## Change to be more specific if you want
+                echo "JOBNAME: CalCalib_${SPEC}_${runNum}" >> ${batch} ## Change to be more specific if you want
 		# Request double the tape file size in space, for trunctuated replays edit down as needed
 		# Note, unless this is set typically replays will produce broken root files
 		echo "DISK_SPACE: "$(( $TapeFileSize * 2 ))" GB" >> ${batch}
@@ -72,7 +75,7 @@ while true; do
                 echo "COMMAND:/group/c-pionlt/USERS/${USER}/hallc_replay_lt/UTIL_BATCH/Analysis_Scripts/CalCalib_Batch.sh ${runNum} ${SPEC} ${MAXEVENTS}" >> ${batch}
                 echo "MAIL: ${USER}@jlab.org" >> ${batch}
                 echo "Submitting batch"
-                eval "jsub ${batch} 2>/dev/null"
+                eval "swif2 add-jsub ${Workflow} -script ${batch} 2>/dev/null"
                 echo " "
                 i=$(( $i + 1 ))
 		if [ $i == $numlines ]; then
@@ -85,6 +88,7 @@ while true; do
 		fi
 		done < "$inputFile"
 	     )
+	    eval 'swif2 run ${Workflow}'
 	    break;;
         [Nn]* ) 
 	        exit;;
